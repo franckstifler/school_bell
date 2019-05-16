@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
 
 void main() => runApp(MyApp());
 
@@ -27,12 +28,21 @@ class MyApp extends StatelessWidget {
 }
 
 class Alarm {
-  DateTime time;
-  String name;
+  int id;
+  DateTime dateTime;
   bool repeat;
-  List<String> days = ['m', 't', 'w', 't', 'f'];
+  bool active;
+  List days = [
+    {'day': 's', 'active': false},
+    {'day': 'm', 'active': true},
+    {'day': 't', 'active': true},
+    {'day': 'w', 'active': true},
+    {'day': 't', 'active': true},
+    {'day': 'f', 'active': true},
+    {'day': 's', 'active': false},
+  ];
 
-  Alarm({this.name, this.time, this.repeat});
+  Alarm({this.id, this.dateTime, this.repeat, this.active});
 }
 
 class MyHomePage extends StatefulWidget {
@@ -46,47 +56,134 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   final List<Alarm> alarms = <Alarm>[
-    new Alarm(name: 'adonis', repeat: false, time: DateTime.now()),
-    new Alarm(name: 'alex', repeat: false, time: DateTime.now())
+    Alarm(
+        id: 0, active: true, repeat: false, dateTime: DateTime.now()),
+    Alarm(id: 1, active: false, repeat: false, dateTime: DateTime.now())
   ];
 
   void _addAlarm() {
-    setState(() {
-      alarms.add(new Alarm(repeat: true, name: 'test name'));
-    });
+    DatePicker.showTimePicker(context,
+        locale: LocaleType.en, showTitleActions: true, onConfirm: (date) {
+      setState(() {
+        alarms.add(Alarm(
+          id: alarms.length,
+          repeat: true,
+          dateTime: date,
+          active: false,
+        ));
+      });
+    }, currentTime: DateTime.now());
   }
 
   Widget _buildRow(Alarm alarm, int index) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
+    // get only the time (hour:minutes) with 0 prefix when needed.
+    String time = alarm.dateTime.toString().substring(11, 16);
+    return ExpansionTile(
+      title: Column(
+        children: <Widget>[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                time,
+                style: TextStyle(fontSize: 50.0),
+              ),
+              Switch(
+                value: alarm.active,
+                onChanged: (val) {
+                  setState(() {
+                    alarms.elementAt(index).active = val;
+                  });
+                },
+              )
+            ],
+          ),
+          Row(
+            children: <Widget>[Text('Mon, Tue, Wed, Thu, Fri')],
+          )
+        ],
+      ),
+      children: <Widget>[
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  '03:45',
-                  style: TextStyle(fontSize: 50.0),
-                ),
-                Switch(
-                  value: alarm.repeat,
-                  onChanged: (val) {
+                Checkbox(
+                  onChanged: (value) {
                     setState(() {
-                      alarms.elementAt(index).repeat = val;
+                      alarms.elementAt(index).repeat = value;
                     });
                   },
-                )
+                  value: alarm.repeat,
+                ),
+                Text('Repeat')
               ],
             ),
             Row(
-              children: <Widget>[Text('Mon, Tue, Wed, Thu, Fri')],
+              children: <Widget>[
+                Icon(Icons.delete),
+                SizedBox(
+                  width: 10,
+                ),
+                Text('Delete'),
+              ],
             )
           ],
         ),
-      ),
+        Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: alarm.days
+              .asMap()
+              .map((index, day) => MapEntry(index, _buildDay(day, index, alarm)))
+              .values
+              .toList()),
+      ],
     );
+  }
+
+  _toggleDay(int alarmId, int dayIndex,  day) {
+    setState(() {
+      var index = alarms.indexWhere((alarm) => alarm.id == alarmId);
+      Alarm alarm = alarms.elementAt(index);
+      alarms.elementAt(index).days.elementAt(dayIndex)['active'] = !alarm.days.elementAt(dayIndex)['active'];
+
+    });
+  }
+
+  Widget _buildDay(day, int dayIndex, Alarm alarm) {
+    if (day['active']) {
+      return RawMaterialButton(
+          onPressed: () {
+            _toggleDay(alarm.id, dayIndex, day);
+          },
+          shape: CircleBorder(),
+          constraints: BoxConstraints.tightFor(
+            height: 35,
+            width: 35,
+          ),
+          fillColor: Colors.orange,
+          child: Text(day['day'].toUpperCase(),
+              style: TextStyle(
+                color: Colors.white,
+              )));
+    } else {
+      return RawMaterialButton(
+          onPressed: () {
+            _toggleDay(alarm.id, dayIndex, day);
+          },
+          shape: CircleBorder(),
+          constraints: BoxConstraints.tightFor(
+            height: 35,
+            width: 35,
+          ),
+          child: Text(day['day'].toUpperCase(),
+              style: TextStyle(
+                color: Colors.black,
+              )));
+    }
   }
 
   @override
