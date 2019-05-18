@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_datetime_picker/flutter_datetime_picker.dart';
+import 'alarm.dart';
 
 void main() => runApp(MyApp());
 
@@ -9,7 +10,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'School Bell',
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -27,24 +28,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Alarm {
-  int id;
-  DateTime dateTime;
-  bool repeat;
-  bool active;
-  List days = [
-    {'day': 's', 'active': false},
-    {'day': 'm', 'active': true},
-    {'day': 't', 'active': true},
-    {'day': 'w', 'active': true},
-    {'day': 't', 'active': true},
-    {'day': 'f', 'active': true},
-    {'day': 's', 'active': false},
-  ];
-
-  Alarm({this.id, this.dateTime, this.repeat, this.active});
-}
-
 class MyHomePage extends StatefulWidget {
   MyHomePage({Key key, this.title}) : super(key: key);
 
@@ -55,23 +38,20 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<Alarm> alarms = <Alarm>[
-    Alarm(
-        id: 0, active: true, repeat: false, dateTime: DateTime.now()),
-    Alarm(id: 1, active: false, repeat: false, dateTime: DateTime.now())
-  ];
 
   void _addAlarm() {
     DatePicker.showTimePicker(context,
-        locale: LocaleType.en, showTitleActions: true, onConfirm: (date) {
-      setState(() {
-        alarms.add(Alarm(
-          id: alarms.length,
-          repeat: true,
-          dateTime: date,
-          active: false,
-        ));
-      });
+        locale: LocaleType.en, showTitleActions: true, onConfirm: (date) async {
+      Alarm alarm = Alarm(
+        id: 100,
+        repeat: true,
+        dateTime: date,
+        active: false,
+      );
+      // alarms.add(alarm);
+      await AlarmProvider.db.insertAlarm(alarm);
+      // AlarmProvider.db.getAlarms();
+      setState(() {});
     }, currentTime: DateTime.now());
   }
 
@@ -93,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 value: alarm.active,
                 onChanged: (val) {
                   setState(() {
-                    alarms.elementAt(index).active = val;
+                    // alarms.elementAt(index).active = val;
                   });
                 },
               )
@@ -113,7 +93,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 Checkbox(
                   onChanged: (value) {
                     setState(() {
-                      alarms.elementAt(index).repeat = value;
+                      // alarms.elementAt(index).repeat = value;
                     });
                   },
                   value: alarm.repeat,
@@ -136,20 +116,21 @@ class _MyHomePageState extends State<MyHomePage> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: alarm.days
-              .asMap()
-              .map((index, day) => MapEntry(index, _buildDay(day, index, alarm)))
-              .values
-              .toList()),
+                .asMap()
+                .map((index, day) =>
+                    MapEntry(index, _buildDay(day, index, alarm)))
+                .values
+                .toList()),
       ],
     );
   }
 
-  _toggleDay(int alarmId, int dayIndex,  day) {
+  _toggleDay(int alarmId, int dayIndex, day) {
     setState(() {
-      var index = alarms.indexWhere((alarm) => alarm.id == alarmId);
-      Alarm alarm = alarms.elementAt(index);
-      alarms.elementAt(index).days.elementAt(dayIndex)['active'] = !alarm.days.elementAt(dayIndex)['active'];
-
+      // var index = alarms.indexWhere((alarm) => alarm.id == alarmId);
+      // Alarm alarm = alarms.elementAt(index);
+      // alarms.elementAt(index).days.elementAt(dayIndex)['active'] =
+      //     !alarm.days.elementAt(dayIndex)['active'];
     });
   }
 
@@ -192,20 +173,25 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         title: Text(widget.title),
       ),
-      body: Container(
-          child: ListView.builder(
-        itemCount: alarms.length,
-        itemBuilder: (BuildContext context, int index) {
-          return _buildRow(alarms[index], index);
-        },
-      )),
+      body: FutureBuilder(
+          initialData: [],
+          future: AlarmProvider.db.getAlarms(),
+          builder: (context, snapshot) {
+            return Container(
+                child: ListView.builder(
+              itemCount: snapshot.data.length,
+              itemBuilder: (BuildContext context, int index) {
+                return _buildRow(snapshot.data[index], index);
+              },
+            ));
+          }),
       floatingActionButton: FloatingActionButton(
         onPressed: _addAlarm,
         tooltip: 'Increment',
         child: Icon(Icons.add),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation
-          .centerFloat, // This trailing comma makes auto-formatting nicer for build methods.
+      // floatingActionButtonLocation: FloatingActionButtonLocation
+      //     .centerFloat, // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
