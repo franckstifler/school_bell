@@ -17,6 +17,10 @@ environment:
   sdk: ">=2.1.0 <3.0.0"
 
 dependencies:
+  path_provider: any
+  sqflite: ^1.1.0
+  flutter_sms: ^1.0.0
+  sms: ^0.2.0
   flutter_datetime_picker: ^1.2.0
   flutter:
     sdk: flutter
