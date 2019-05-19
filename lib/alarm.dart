@@ -17,13 +17,13 @@ class Alarm {
   bool repeat;
   bool active;
   List<Map<String, dynamic>> days = [
-    {'day': 's', 'active': false},
-    {'day': 'm', 'active': true},
-    {'day': 't', 'active': true},
-    {'day': 'w', 'active': true},
-    {'day': 't', 'active': true},
-    {'day': 'f', 'active': true},
-    {'day': 's', 'active': false},
+    {'day': 's', 'active': false, 'dayLong': 'Sun'},
+    {'day': 'm', 'active': true, 'dayLong': 'Mon'},
+    {'day': 't', 'active': true, 'dayLong': 'Tue'},
+    {'day': 'w', 'active': true, 'dayLong': 'Wed'},
+    {'day': 't', 'active': true, 'dayLong': 'Thu'},
+    {'day': 'f', 'active': true, 'dayLong': 'Fri'},
+    {'day': 's', 'active': false, 'dayLong': 'Sat'},
   ];
 
   Alarm({this.id, this.dateTime, this.repeat, this.active});
@@ -44,8 +44,8 @@ class Alarm {
   Alarm.fromMap(Map<String, dynamic> map) {
     id = map[columnId];
     dateTime = DateTime.parse(map[columnDateTime]);
-    repeat = map[columnRepeat] == 0;
-    active = map[columnActive] == 0;
+    repeat = map[columnRepeat] == 1;
+    active = map[columnActive] == 1;
     days = List<Map<String, dynamic>>.from(jsonDecode(map[columnDays]));
   }
 }
@@ -91,12 +91,16 @@ class AlarmProvider {
     return alarm;
   }
 
+  Future<int> updateAlarm(Alarm alarm) async {
+    final db = await database;
+    return await db.update(tableAlarm, alarm.toMap(), where: '$columnId = ?', whereArgs: [alarm.id]);
+  }
+
   Future<List<Alarm>> getAlarms() async {
     final db = await database;
     List<Map> alarms = await db.query(tableAlarm,
         columns: [columnId, columnDateTime, columnActive, columnDays, columnRepeat]);
-    var es = alarms.map((alarm) => Alarm.fromMap(alarm)).toList();
-    return es;
+    return alarms.map((alarm) => Alarm.fromMap(alarm)).toList();
   }
 
   Future<Alarm> getAlarm({int id}) async {

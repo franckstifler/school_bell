@@ -12,15 +12,6 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'School Bell',
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
         primarySwatch: Colors.blue,
       ),
       home: MyHomePage(title: 'SchoolBell'),
@@ -38,13 +29,11 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-
   void _addAlarm() {
     DatePicker.showTimePicker(context,
         locale: LocaleType.en, showTitleActions: true, onConfirm: (date) async {
       Alarm alarm = Alarm(
-        id: 100,
-        repeat: true,
+        repeat: false,
         dateTime: date,
         active: false,
       );
@@ -72,16 +61,22 @@ class _MyHomePageState extends State<MyHomePage> {
               Switch(
                 value: alarm.active,
                 onChanged: (val) {
-                  setState(() {
-                    // alarms.elementAt(index).active = val;
-                  });
+                  AlarmProvider.db.updateAlarm(alarm..active = val);
+                  setState(() {});
                 },
               )
             ],
           ),
           Row(
-            children: <Widget>[Text('Mon, Tue, Wed, Thu, Fri')],
-          )
+              // mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(alarm.days
+                    .where((a) => a['active'] == true)
+                    .map((a) => a['dayLong'])
+                    .join(', '))
+              ]
+              // .toList(),
+              )
         ],
       ),
       children: <Widget>[
@@ -92,9 +87,8 @@ class _MyHomePageState extends State<MyHomePage> {
               children: <Widget>[
                 Checkbox(
                   onChanged: (value) {
-                    setState(() {
-                      // alarms.elementAt(index).repeat = value;
-                    });
+                    AlarmProvider.db.updateAlarm(alarm..repeat = value);
+                    setState(() {});
                   },
                   value: alarm.repeat,
                 ),
@@ -103,11 +97,20 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             Row(
               children: <Widget>[
-                Icon(Icons.delete),
+                GestureDetector(
+                  child: Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  onTap: () {
+                    AlarmProvider.db.delete(alarm.id);
+                    // TODO: Send sms to disable alarm;
+                    setState(() {});
+                  },
+                ),
                 SizedBox(
                   width: 10,
                 ),
-                Text('Delete'),
               ],
             )
           ],
@@ -125,46 +128,28 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  _toggleDay(int alarmId, int dayIndex, day) {
-    setState(() {
-      // var index = alarms.indexWhere((alarm) => alarm.id == alarmId);
-      // Alarm alarm = alarms.elementAt(index);
-      // alarms.elementAt(index).days.elementAt(dayIndex)['active'] =
-      //     !alarm.days.elementAt(dayIndex)['active'];
-    });
+  _toggleDay(Alarm alarm, int dayIndex, day) {
+    var newAlarm = alarm;
+    newAlarm.days[dayIndex]['active'] = !newAlarm.days[dayIndex]['active'];
+    AlarmProvider.db.updateAlarm(newAlarm..active = false);
+    setState(() {});
   }
 
   Widget _buildDay(day, int dayIndex, Alarm alarm) {
-    if (day['active']) {
-      return RawMaterialButton(
-          onPressed: () {
-            _toggleDay(alarm.id, dayIndex, day);
-          },
-          shape: CircleBorder(),
-          constraints: BoxConstraints.tightFor(
-            height: 35,
-            width: 35,
-          ),
-          fillColor: Colors.orange,
-          child: Text(day['day'].toUpperCase(),
-              style: TextStyle(
-                color: Colors.white,
-              )));
-    } else {
-      return RawMaterialButton(
-          onPressed: () {
-            _toggleDay(alarm.id, dayIndex, day);
-          },
-          shape: CircleBorder(),
-          constraints: BoxConstraints.tightFor(
-            height: 35,
-            width: 35,
-          ),
-          child: Text(day['day'].toUpperCase(),
-              style: TextStyle(
-                color: Colors.black,
-              )));
-    }
+    return RawMaterialButton(
+        onPressed: () {
+          _toggleDay(alarm, dayIndex, day);
+        },
+        shape: CircleBorder(),
+        constraints: BoxConstraints.tightFor(
+          height: 35,
+          width: 35,
+        ),
+        fillColor: day['active'] ? Colors.orange : Colors.grey,
+        child: Text(day['day'].toUpperCase(),
+            style: TextStyle(
+              color: Colors.white,
+            )));
   }
 
   @override
