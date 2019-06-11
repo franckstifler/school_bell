@@ -104,7 +104,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   ),
                   onTap: () {
                     AlarmProvider.db.delete(alarm.id);
-                    // TODO: Send sms to disable alarm;
                     setState(() {});
                   },
                 ),
@@ -146,7 +145,7 @@ class _MyHomePageState extends State<MyHomePage> {
           width: 35,
         ),
         fillColor: day['active'] ? Colors.orange : Colors.grey,
-        child: Text(day['day'].toUpperCase(),
+        child: Text(day['dayLong'][0].toUpperCase(),
             style: TextStyle(
               color: Colors.white,
             )));
@@ -172,7 +171,7 @@ class _MyHomePageState extends State<MyHomePage> {
           }),
       floatingActionButton: FloatingActionButton(
         onPressed: _addAlarm,
-        tooltip: 'Increment',
+        tooltip: 'Add alarm',
         child: Icon(Icons.add),
       ),
       // floatingActionButtonLocation: FloatingActionButtonLocation
