@@ -57,6 +57,8 @@ class AlarmProvider {
   AlarmProvider._();
   static final AlarmProvider db = AlarmProvider._();
   List<Alarm> _alarms = [];
+  SmsSender sender = SmsSender();
+  final phoneNumber = '656181702';
 
   Future<Database> get database async {
     if (_db != null) {
@@ -79,7 +81,9 @@ class AlarmProvider {
   ringAlarm() {
     var today = DateTime.now();
     var day;
-    // var nextAlarm = _alarms[0].dateTime ?? null;
+    List<DateTime> todayAlarms = [];
+    String currentAlarm = '';
+
     _alarms.forEach((alarm) async {
       if (alarm.active) {
         for (var i = 0; i < alarm.days.length; i++) {
@@ -87,19 +91,29 @@ class AlarmProvider {
           if (day['day'] == today.weekday && day['active']) {
             if (alarm.dateTime.hour == today.hour &&
                 alarm.dateTime.minute == today.minute) {
-              SmsSender sender = new SmsSender();
-              sender.sendSms(SmsMessage('655565944', 'SIG'));
-              if(!alarm.repeat) {
+              currentAlarm = today.toString().substring(11, 16);
+              // sender.sendSms(SmsMessage(phoneNumber, 'S$time'));
+              if (!alarm.repeat) {
                 updateAlarm(alarm..active = false);
               }
-              // TODO: Find next active alarm.
+            } else {
+              // Add to the list of alarms of today
+              todayAlarms.add(alarm.dateTime);
             }
           }
         }
       }
     });
+    todayAlarms.sort();
+    String time = '';
+    if (todayAlarms.isNotEmpty) {
+      time = todayAlarms[0].toString().substring(11, 16);
+    }
+    if (currentAlarm.isNotEmpty) {
+      sender.sendSms(SmsMessage(phoneNumber, 'S$currentAlarm$time'));
+    }
     // Reschedule ring.
-    Future.delayed(Duration(seconds: 5), ringAlarm);
+    Future.delayed(Duration(seconds: 30), ringAlarm);
   }
 
   Future _onCreate(Database db, int version) async {
