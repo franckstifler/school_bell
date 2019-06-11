@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sms/sms.dart';
 
 final String tableAlarm = 'alarm';
 final String columnId = '_id';
@@ -17,13 +18,13 @@ class Alarm {
   bool repeat;
   bool active;
   List<Map<String, dynamic>> days = [
-    {'day': 's', 'active': false, 'dayLong': 'Sun'},
-    {'day': 'm', 'active': true, 'dayLong': 'Mon'},
-    {'day': 't', 'active': true, 'dayLong': 'Tue'},
-    {'day': 'w', 'active': true, 'dayLong': 'Wed'},
-    {'day': 't', 'active': true, 'dayLong': 'Thu'},
-    {'day': 'f', 'active': true, 'dayLong': 'Fri'},
-    {'day': 's', 'active': false, 'dayLong': 'Sat'},
+    {'day': 7, 'active': false, 'dayLong': 'Sun'},
+    {'day': 1, 'active': true, 'dayLong': 'Mon'},
+    {'day': 2, 'active': true, 'dayLong': 'Tue'},
+    {'day': 3, 'active': true, 'dayLong': 'Wed'},
+    {'day': 4, 'active': true, 'dayLong': 'Thu'},
+    {'day': 5, 'active': true, 'dayLong': 'Fri'},
+    {'day': 6, 'active': false, 'dayLong': 'Sat'},
   ];
 
   Alarm({this.id, this.dateTime, this.repeat, this.active});
@@ -55,6 +56,7 @@ class AlarmProvider {
 
   AlarmProvider._();
   static final AlarmProvider db = AlarmProvider._();
+  List<Alarm> _alarms = [];
 
   Future<Database> get database async {
     if (_db != null) {
@@ -72,6 +74,32 @@ class AlarmProvider {
     } catch (e) {
       print(e);
     }
+  }
+
+  ringAlarm() {
+    var today = DateTime.now();
+    var day;
+    // var nextAlarm = _alarms[0].dateTime ?? null;
+    _alarms.forEach((alarm) async {
+      if (alarm.active) {
+        for (var i = 0; i < alarm.days.length; i++) {
+          day = alarm.days[i];
+          if (day['day'] == today.weekday && day['active']) {
+            if (alarm.dateTime.hour == today.hour &&
+                alarm.dateTime.minute == today.minute) {
+              SmsSender sender = new SmsSender();
+              sender.sendSms(SmsMessage('655565944', 'SIG'));
+              if(!alarm.repeat) {
+                updateAlarm(alarm..active = false);
+              }
+              // TODO: Find next active alarm.
+            }
+          }
+        }
+      }
+    });
+    // Reschedule ring.
+    Future.delayed(Duration(seconds: 5), ringAlarm);
   }
 
   Future _onCreate(Database db, int version) async {
@@ -93,14 +121,24 @@ class AlarmProvider {
 
   Future<int> updateAlarm(Alarm alarm) async {
     final db = await database;
-    return await db.update(tableAlarm, alarm.toMap(), where: '$columnId = ?', whereArgs: [alarm.id]);
+    return await db.update(tableAlarm, alarm.toMap(),
+        where: '$columnId = ?', whereArgs: [alarm.id]);
   }
 
   Future<List<Alarm>> getAlarms() async {
     final db = await database;
-    List<Map> alarms = await db.query(tableAlarm,
-        columns: [columnId, columnDateTime, columnActive, columnDays, columnRepeat]);
-    return alarms.map((alarm) => Alarm.fromMap(alarm)).toList();
+    List<Map> alarms = await db.query(tableAlarm, columns: [
+      columnId,
+      columnDateTime,
+      columnActive,
+      columnDays,
+      columnRepeat
+    ]);
+    _alarms = alarms.map((alarm) => Alarm.fromMap(alarm)).toList();
+
+    // Schedule sms to ring
+    ringAlarm();
+    return _alarms;
   }
 
   Future<Alarm> getAlarm({int id}) async {
